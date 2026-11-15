@@ -14,6 +14,7 @@ self.TRAINER = {
     { name: "Switch lunges",        reps: "10", video: "videos/switch-lunges.mp4" },
     { name: "Climbers",             reps: "10", video: "videos/climbers.mp4" }
   ],
+  speech: { lang: "en-US", round: "Round", reps: "reps", next: "Next", done: "Well done" },
   text: {
     start: "Anza mazoezi",
     round: "Raundi",
@@ -27,6 +28,8 @@ self.TRAINER = {
     end: "Maliza",
     endConfirm: "Maliza mazoezi sasa?",
     videoSoon: "Video inakuja",
+    soundOn: "Sauti: ON",
+    soundOff: "Sauti: OFF",
     doneTitle: "Umemaliza",
     doneCount: "Mazoezi uliyokamilisha",
     again: "Rudia",

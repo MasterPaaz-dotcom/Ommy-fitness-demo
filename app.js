@@ -43,7 +43,10 @@
   function vid(src) {
     var v = el("video", { playsinline: "", preload: "metadata" });
     v.muted = true; v.loop = true; v.playsInline = true;
-    v.addEventListener("error", function () { v.classList.add("missing"); });
+    v.addEventListener("error", function () {
+      v.classList.add("missing");
+      if (q.has("debug") && v.parentNode) v.parentNode.setAttribute("data-miss", v.getAttribute("src"));
+    });
     v.src = src;
     return v;
   }
@@ -52,12 +55,29 @@
   function bumpDone() { try { localStorage.setItem(storeKey, String(doneCount() + 1)); } catch (e) {} }
 
   // ---- sauti, mtetemo, screen wake ----
+  var SP = T.speech || {};
+  var soundOn = true;
+  try { soundOn = localStorage.getItem("emom_sound") !== "off"; } catch (e) {}
+  function say(text) {
+    if (!soundOn || !text || !("speechSynthesis" in window)) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = SP.lang || "en-US";
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function announce() {
+    var s = steps[idx];
+    var pre = s.i === 0 ? (SP.round || "Round") + " " + s.r + ". " : "";
+    say(pre + s.ex.name + ". " + s.ex.reps + " " + (SP.reps || "reps"));
+  }
   var ac;
   function initAudio() {
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.resume) ac.resume(); } catch (e) {}
   }
   function beep(freq, dur, when) {
-    if (!ac) return;
+    if (!ac || !soundOn) return;
     try {
       var o = ac.createOscillator(), g = ac.createGain();
       o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
@@ -91,7 +111,7 @@
     T.exercises.forEach(function (ex, i) { steps.push({ r: r, i: i, ex: ex }); });
   }
   var total = T.secondsPerExercise * 1000;
-  var idx = 0, leftMs = total, endAt = 0, running = false, timer = null, lastBeep = -1, P = {};
+  var idx = 0, leftMs = total, endAt = 0, running = false, timer = null, lastBeep = -1, lastSaid = -1, P = {};
 
   function header() {
     var h = el("div", { class: "head" });
@@ -118,24 +138,25 @@
       ));
     });
     var n = doneCount();
-    app.replaceChildren(
+    app.replaceChildren.apply(app, [
       header(),
       el("h1", {}, T.workoutName),
       el("p", { class: "meta" }, T.exercises.length + " " + S.exercises + ", " + S.round.toLowerCase() + " " + T.rounds + ", " + mins + " " + S.minutes),
       list,
       n ? el("p", { class: "meta" }, S.doneCount + ": " + n) : null,
       el("div", { class: "cta" }, el("button", { class: "btn", onclick: startWorkout }, S.start))
-    );
+    ].filter(Boolean));
   }
 
   // ---- player ----
   function startWorkout() {
     initAudio(); lock();
     idx = 0; leftMs = total; lastBeep = -1;
-    showPlayer(); setStep(); play(); beep(988, 0.3); buzz(200);
+    lastSaid = -1; showPlayer(); setStep(); play(); beep(988, 0.3); buzz(200); announce();
   }
   function showPlayer() {
     P.round = el("span"); P.step = el("span");
+    P.sound = el("button", { class: "snd", onclick: toggleSound });
     P.stage = el("div", { class: "stage" }, el("span", { class: "ph" }, S.videoSoon));
     P.name = el("div", { class: "name" });
     P.repsNum = el("b");
@@ -144,7 +165,7 @@
     P.next = el("div", { class: "next" });
     P.toggle = el("button", { class: "btn", onclick: toggle });
     app.replaceChildren(
-      el("div", { class: "top" }, P.round, P.step),
+      el("div", { class: "top" }, P.round, P.step, P.sound),
       P.stage,
       P.name,
       el("div", { class: "repsrow" }, el("div", { class: "reps" }, P.repsNum, el("span", {}, " " + S.reps)), P.time),
@@ -176,6 +197,13 @@
     P.time.textContent = mmss(secs);
     P.bar.style.width = Math.min(100, (1 - ms / total) * 100) + "%";
     P.toggle.textContent = running ? S.pause : S.resume;
+    P.sound.textContent = soundOn ? S.soundOn : S.soundOff;
+  }
+  function toggleSound() {
+    soundOn = !soundOn;
+    try { localStorage.setItem("emom_sound", soundOn ? "on" : "off"); } catch (e) {}
+    if (!soundOn && "speechSynthesis" in window) speechSynthesis.cancel();
+    render(running ? Math.max(0, endAt - Date.now()) : leftMs);
   }
   function play() {
     running = true; endAt = Date.now() + leftMs; lastBeep = -1;
@@ -193,6 +221,7 @@
     var left = endAt - Date.now();
     var secs = Math.ceil(left / 1000);
     if (left <= 0) { next(); return; }
+    if (secs === 5 && lastSaid !== idx && idx + 1 < steps.length) { lastSaid = idx; say((SP.next || "Next") + ": " + steps[idx + 1].ex.name); }
     if (secs <= 3 && secs !== lastBeep) { lastBeep = secs; beep(660, 0.1); buzz(40); }
     render(left);
   }
@@ -203,12 +232,12 @@
     var wasRunning = running;
     setStep();
     if (wasRunning) { endAt = Date.now() + leftMs; }
-    beep(988, 0.3); buzz(200);
+    beep(988, 0.3); buzz(200); announce();
   }
   function endNow() { if (confirm(S.endConfirm)) showHome(); }
   function finish() {
     clearInterval(timer); running = false; unlock();
-    bumpDone(); beep(784, 0.15); beep(988, 0.15, 0.2); beep(1175, 0.35, 0.4); buzz([200, 100, 200, 100, 400]);
+    bumpDone(); say(SP.done || "Well done"); beep(784, 0.15); beep(988, 0.15, 0.2); beep(1175, 0.35, 0.4); buzz([200, 100, 200, 100, 400]);
     var mins = Math.round(steps.length * T.secondsPerExercise / 60);
     app.replaceChildren(
       header(),
