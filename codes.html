@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tengeneza hash ya code</title>
+<style>body{background:#000;color:#fff;font:16px system-ui;max-width:480px;margin:0 auto;padding:20px}
+input,button{width:100%;padding:14px;border-radius:12px;border:1.5px solid #333;background:#000;color:#fff;font:700 16px system-ui;margin-top:10px}
+button{background:#BDD922;color:#000;border:0}code{display:block;word-break:break-all;margin-top:14px;color:#BDD922}</style></head>
+<body><h2>Hash ya code</h2>
+<p>Andika code unayompa mteja (mf. OMMY-ADV-7K2P). Nakili hash na uiweke kwenye <b>codeHashes</b> ya bidhaa kwenye config.js. Herufi kubwa au ndogo hazihusu.</p>
+<input id="c" placeholder="Code" autocapitalize="characters"><button id="b">Tengeneza hash</button><code id="o"></code>
+<script>document.getElementById("b").onclick=function(){var v=document.getElementById("c").value.trim().toUpperCase();
+crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)).then(function(b){document.getElementById("o").textContent=Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}</script>
+</body></html>

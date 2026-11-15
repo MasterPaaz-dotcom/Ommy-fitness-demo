@@ -3,7 +3,7 @@
   var T = self.TRAINER, S = T.text;
   var q = new URLSearchParams(location.search);
 
-  // ---- brand na rangi (?brand=Jina&color=C6E41B) ----
+  // ---- brand na rangi (?brand=Jina&color=BDD922) ----
   var brandParam = (q.get("brand") || "").trim().slice(0, 40);
   var brand = brandParam || T.brand;
   var c = (q.get("color") || "").replace("#", "");
@@ -35,7 +35,8 @@
     });
     for (var i = 2; i < arguments.length; i++) {
       var kid = arguments[i];
-      if (kid != null) n.append(kid);
+      if (Array.isArray(kid)) kid.forEach(function (k) { if (k != null) n.append(k); });
+      else if (kid != null) n.append(kid);
     }
     return n;
   }
@@ -50,9 +51,26 @@
     v.src = src;
     return v;
   }
-  var storeKey = "emom_done_" + brand.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  var slug = brand.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  var storeKey = "emom_done_" + slug, unlockKey = "emom_unlock_" + slug;
   function doneCount() { try { return +localStorage.getItem(storeKey) || 0; } catch (e) { return 0; } }
   function bumpDone() { try { localStorage.setItem(storeKey, String(doneCount() + 1)); } catch (e) {} }
+
+  // ---- bidhaa na kufuli ----
+  var unlocked = [];
+  try { unlocked = JSON.parse(localStorage.getItem(unlockKey) || "[]"); } catch (e) {}
+  function isUnlocked(id) { return !id || unlocked.indexOf(id) >= 0; }
+  function addUnlock(id) {
+    if (unlocked.indexOf(id) < 0) unlocked.push(id);
+    try { localStorage.setItem(unlockKey, JSON.stringify(unlocked)); } catch (e) {}
+  }
+  function product(id) { return (T.products || []).filter(function (p) { return p.id === id; })[0]; }
+  function sha256(str) {
+    var data = new TextEncoder().encode(str.trim().toUpperCase());
+    return crypto.subtle.digest("SHA-256", data).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (x) { return x.toString(16).padStart(2, "0"); }).join("");
+    });
+  }
 
   // ---- sauti, mtetemo, screen wake ----
   var SP = T.speech || {};
@@ -104,14 +122,19 @@
     if (document.visibilityState === "visible" && running) lock();
   });
 
-  // ---- hali ya mazoezi ----
+  // ---- hali ----
   var app = document.getElementById("app");
-  var steps = [];
-  for (var r = 1; r <= T.rounds; r++) {
-    T.exercises.forEach(function (ex, i) { steps.push({ r: r, i: i, ex: ex }); });
-  }
-  var total = T.secondsPerExercise * 1000;
+  var tab = "train", level = 0;
+  var W = T.workouts[0], steps = [], total = 60000;
   var idx = 0, leftMs = total, endAt = 0, running = false, timer = null, lastBeep = -1, lastSaid = -1, P = {};
+
+  function buildSteps(w) {
+    var out = [];
+    for (var r = 1; r <= w.rounds; r++) w.exercises.forEach(function (ex, i) { out.push({ r: r, i: i, ex: ex }); });
+    return out;
+  }
+  function workoutLocked(w) { return !isUnlocked(w.productId); }
+  function minsOf(w) { return Math.round(w.rounds * w.exercises.length * w.secondsPerExercise / 60); }
 
   function header() {
     var h = el("div", { class: "head" });
@@ -128,31 +151,101 @@
   // ---- skrini ya kwanza ----
   function showHome() {
     clearInterval(timer); running = false; unlock();
-    var mins = Math.round(steps.length * T.secondsPerExercise / 60);
+    var parts = [header(), tabsBar()];
+    if (tab === "train") parts = parts.concat(trainView()); else parts = parts.concat(mealView());
+    app.replaceChildren.apply(app, parts.filter(Boolean));
+  }
+  function tabsBar() {
+    function t(id, label) {
+      return el("button", { class: "tab" + (tab === id ? " active" : ""), onclick: function () { tab = id; showHome(); } }, label);
+    }
+    return el("div", { class: "tabs" }, t("train", S.tagTrain), t("meal", S.tagMeal));
+  }
+  function trainView() {
+    W = T.workouts[level];
+    var chips = el("div", { class: "chips" });
+    T.workouts.forEach(function (w, i) {
+      var lockedTag = workoutLocked(w) ? el("span", { class: "lock" }, S.locked) : null;
+      chips.append(el("button", { class: "chip" + (i === level ? " active" : ""), onclick: function () { level = i; showHome(); } }, w.level, lockedTag));
+    });
     var list = el("ul", { class: "list" });
-    T.exercises.forEach(function (ex) {
+    W.exercises.forEach(function (ex) {
       var v = vid(ex.video + "#t=0.1");
       list.append(el("li", { class: "row" },
         el("div", { class: "thumb" }, v),
         el("div", { class: "info" }, el("div", { class: "rname" }, ex.name), el("div", { class: "rreps" }, ex.reps + " " + S.reps))
       ));
     });
-    var n = doneCount();
-    app.replaceChildren.apply(app, [
-      header(),
-      el("h1", {}, T.workoutName),
-      el("p", { class: "meta" }, T.exercises.length + " " + S.exercises + ", " + S.round.toLowerCase() + " " + T.rounds + ", " + mins + " " + S.minutes),
+    var n = doneCount(), isLocked = workoutLocked(W);
+    var cta = isLocked
+      ? el("button", { class: "btn", onclick: function () { showPay(product(W.productId)); } }, S.unlock + " " + W.level)
+      : el("button", { class: "btn", onclick: startWorkout }, S.start);
+    return [
+      chips,
+      el("h1", {}, W.name),
+      el("p", { class: "meta" }, W.exercises.length + " " + S.exercises + ", " + S.round.toLowerCase() + " " + W.rounds + ", " + minsOf(W) + " " + S.minutes),
       list,
       n ? el("p", { class: "meta" }, S.doneCount + ": " + n) : null,
-      el("div", { class: "cta" }, el("button", { class: "btn", onclick: startWorkout }, S.start))
-    ].filter(Boolean));
+      el("div", { class: "cta" }, cta)
+    ];
+  }
+  function mealView() {
+    var list = el("ul", { class: "plist" });
+    (T.products || []).filter(function (p) { return p.type === "meal"; }).forEach(function (p) {
+      var open = isUnlocked(p.id);
+      var action = open
+        ? el("a", { class: "btn small", href: p.file, target: "_blank", rel: "noopener" }, S.open)
+        : el("button", { class: "btn small", onclick: function () { showPay(p); } }, S.pay);
+      list.append(el("li", { class: "prow" },
+        el("div", { class: "pinfo" },
+          el("div", { class: "ptitle" }, p.title),
+          el("div", { class: "pdesc" }, p.desc),
+          open ? null : el("div", { class: "price" }, p.price)),
+        action));
+    });
+    return [el("h1", {}, S.tagMeal), el("p", { class: "meta" }, S.mealIntro), list];
+  }
+
+  // ---- dirisha la kulipia / kuweka code ----
+  function showPay(p) {
+    if (!p) return;
+    var pay = T.pay || {};
+    var msg = (pay.message || "") + " " + p.title + " (" + p.price + ")";
+    var err = el("div", { class: "err" });
+    var input = el("input", { class: "code", type: "text", placeholder: S.codePlaceholder, autocomplete: "off", autocapitalize: "characters" });
+    function close() { ov.remove(); }
+    var ov = el("div", { class: "overlay", onclick: function (e) { if (e.target === ov) close(); } },
+      el("div", { class: "sheet" },
+        el("h2", {}, p.title),
+        el("div", { class: "price big" }, p.price),
+        el("p", { class: "meta" }, p.desc),
+        el("ol", {},
+          el("li", {}, S.payStep1 + ":", el("br"), (pay.instructions || []).map(function (t) { return el("div", { class: "pi" }, t); })),
+          el("li", {}, S.payStep2,
+            el("br"),
+            el("a", { class: "btn ghost small", href: "https://wa.me/" + (pay.whatsapp || "") + "?text=" + encodeURIComponent(msg), target: "_blank", rel: "noopener" }, S.sendWa)),
+          el("li", {}, S.payStep3, input, err,
+            el("button", {
+              class: "btn", onclick: function () {
+                sha256(input.value).then(function (h) {
+                  if ((p.codeHashes || []).indexOf(h) >= 0) { addUnlock(p.id); close(); showHome(); }
+                  else err.textContent = S.codeWrong;
+                }).catch(function () { err.textContent = S.codeWrong; });
+              }
+            }, S.unlock))),
+        pay.soon ? el("p", { class: "meta" }, pay.soon) : null,
+        el("button", { class: "btn ghost", onclick: close }, S.close)));
+    document.body.append(ov);
   }
 
   // ---- player ----
   function startWorkout() {
+    W = T.workouts[level];
+    if (workoutLocked(W)) { showPay(product(W.productId)); return; }
+    steps = buildSteps(W); total = W.secondsPerExercise * 1000;
     initAudio(); lock();
-    idx = 0; leftMs = total; lastBeep = -1;
-    lastSaid = -1; showPlayer(); setStep(); play(); beep(988, 0.3); buzz(200); announce();
+    idx = 0; leftMs = total; lastBeep = -1; lastSaid = -1;
+    showPlayer(); setStep(); play(); beep(988, 0.3); buzz(200); announce();
   }
   function showPlayer() {
     P.round = el("span"); P.step = el("span");
@@ -179,8 +272,8 @@
   }
   function setStep() {
     var s = steps[idx];
-    P.round.textContent = S.round + " " + s.r + "/" + T.rounds;
-    P.step.textContent = S.exercise + " " + (s.i + 1) + "/" + T.exercises.length;
+    P.round.textContent = S.round + " " + s.r + "/" + W.rounds;
+    P.step.textContent = S.exercise + " " + (s.i + 1) + "/" + W.exercises.length;
     P.name.textContent = s.ex.name;
     P.repsNum.textContent = s.ex.reps;
     P.next.textContent = idx + 1 < steps.length ? S.next + ": " + steps[idx + 1].ex.name : S.last;
@@ -238,12 +331,11 @@
   function finish() {
     clearInterval(timer); running = false; unlock();
     bumpDone(); say(SP.done || "Well done"); beep(784, 0.15); beep(988, 0.15, 0.2); beep(1175, 0.35, 0.4); buzz([200, 100, 200, 100, 400]);
-    var mins = Math.round(steps.length * T.secondsPerExercise / 60);
     app.replaceChildren(
       header(),
       el("div", { class: "done" },
         el("h1", {}, S.doneTitle),
-        el("div", { class: "reps" }, el("b", {}, String(mins)), el("span", {}, " " + S.minutes)),
+        el("div", { class: "reps" }, el("b", {}, String(minsOf(W))), el("span", {}, " " + S.minutes)),
         el("p", { class: "meta" }, S.doneCount + ": " + doneCount())
       ),
       el("div", { class: "cta" },

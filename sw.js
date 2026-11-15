@@ -1,12 +1,14 @@
 // sw.js — offline. Ukibadilisha videos au config, ongeza namba ya VERSION ili simu zichukue mpya.
 importScripts("config.js");
-var VERSION = "v4";
+var VERSION = "v5";
 var CACHE = "emom-" + VERSION;
-var SHELL = ["./", "index.html", "app.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo.jpg"];
+var SHELL = ["./", "index.html", "app.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo-ommy.png"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (cache) {
-    var files = SHELL.concat(self.TRAINER.exercises.map(function (x) { return x.video; }));
+    var vids = [];
+    self.TRAINER.workouts.forEach(function (w) { w.exercises.forEach(function (x) { if (vids.indexOf(x.video) < 0) vids.push(x.video); }); });
+    var files = SHELL.concat(vids);
     // kila faili peke yake, ili faili linalokosekana (mf. logo.png) lisivunje zingine
     return Promise.all(files.map(function (f) { return cache.add(f).catch(function () {}); }));
   }));
