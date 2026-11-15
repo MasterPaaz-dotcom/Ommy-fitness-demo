@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>EMOM</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#000; --panel:#141414; --line:#262626; --muted:#9a9a9a;
+  --accent:#C6E41B; --on-accent:#000;
+  --display:"Arial Black","Segoe UI Black","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:#fff;font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;gap:14px;
+  padding:calc(14px + env(safe-area-inset-top)) 18px calc(130px + env(safe-area-inset-bottom))}
+.head{display:flex;align-items:center;min-height:44px}
+.logo{height:96px;width:auto;display:block}
+.wordmark{font:900 20px var(--display);color:var(--accent);letter-spacing:.01em}
+h1{font:900 30px/1.1 var(--display)}
+.meta{color:var(--muted);font-size:15px}
+.list{list-style:none;border-top:1px solid var(--line)}
+.row{display:flex;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.thumb{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;background:var(--panel);flex:none}
+.thumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rname{font-weight:700;font-size:17px}
+.rreps{color:var(--accent);font-weight:700;margin-top:2px}
+video.missing{display:none}
+.cta{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;max-width:480px;margin:0 auto;
+  padding:28px 18px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(rgba(0,0,0,0),#000 40%)}
+.btn{appearance:none;border:0;border-radius:14px;padding:17px 12px;width:100%;cursor:pointer;
+  background:var(--accent);color:var(--on-accent);font:900 17px var(--display)}
+.btn.ghost{background:transparent;color:#fff;border:1.5px solid #333}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.btn:active{transform:scale(.98)}
+.top{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
+.stage{position:relative;width:100%;aspect-ratio:4/5;max-height:46dvh;border-radius:16px;overflow:hidden;background:var(--panel)}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700}
+.name{font:900 26px/1.1 var(--display)}
+.repsrow{display:flex;justify-content:space-between;align-items:flex-end}
+.reps{color:var(--accent);font:900 22px var(--display)}
+.reps b{font-size:clamp(64px,22vw,92px);line-height:.9}
+.time{font:800 26px ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:#222;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.next{color:var(--muted);font-size:15px}
+.controls{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;margin-top:auto}
+.done{display:flex;flex-direction:column;gap:14px;margin-top:8vh}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
