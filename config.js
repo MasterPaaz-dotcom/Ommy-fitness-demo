@@ -8,11 +8,11 @@ self.TRAINER = {
   rounds: 3,                 // 10x3 = reps 10, raundi 3
   secondsPerExercise: 60,    // EMOM: zoezi 1 kila dakika
   exercises: [
-    { name: "Plank out",            reps: "10", video: "videos/plank-out.mp4" },
-    { name: "Inclined plank in",    reps: "10", video: "videos/inclined-plank-in.mp4" },
-    { name: "Inclined plank jacks", reps: "30", video: "videos/inclined-plank-jacks.mp4" },
-    { name: "Switch lunges",        reps: "10", video: "videos/switch-lunges.mp4" },
-    { name: "Climbers",             reps: "10", video: "videos/climbers.mp4" }
+    { name: "Plank out",            reps: "10", video: "plank-out.mp4" },
+    { name: "Inclined plank in",    reps: "10", video: "inclined-plank-in.mp4" },
+    { name: "Inclined plank jacks", reps: "30", video: "inclined-plank-jacks.mp4" },
+    { name: "Switch lunges",        reps: "10", video: "switch-lunges.mp4" },
+    { name: "Climbers",             reps: "10", video: "climbers.mp4" }
   ],
   speech: { lang: "en-US", round: "Round", reps: "reps", next: "Next", done: "Well done" },
   text: {

@@ -1,6 +1,6 @@
 // sw.js — offline. Ukibadilisha videos au config, ongeza namba ya VERSION ili simu zichukue mpya.
 importScripts("config.js");
-var VERSION = "v3";
+var VERSION = "v4";
 var CACHE = "emom-" + VERSION;
 var SHELL = ["./", "index.html", "app.js", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo.jpg"];
 
